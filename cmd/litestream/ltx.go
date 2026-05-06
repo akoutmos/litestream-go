@@ -18,7 +18,7 @@ type LTXCommand struct{}
 // Run executes the command.
 func (c *LTXCommand) Run(ctx context.Context, args []string) (err error) {
 	fs := flag.NewFlagSet("litestream-ltx", flag.ContinueOnError)
-	configPath, noExpandEnv := registerConfigFlag(fs)
+	configPath, noExpandEnv, fromStdin := registerConfigFlag(fs)
 	var level levelVar
 	fs.Var(&level, "level", "compaction level (0-9 or \"all\")")
 	fs.Usage = c.Usage
@@ -35,17 +35,16 @@ func (c *LTXCommand) Run(ctx context.Context, args []string) (err error) {
 		if *configPath != "" {
 			return fmt.Errorf("cannot specify a replica URL and the -config flag")
 		}
+		if *fromStdin {
+			return fmt.Errorf("cannot specify a replica URL and the -stdin flag")
+		}
 		if r, err = NewReplicaFromConfig(&ReplicaConfig{URL: fs.Arg(0)}, nil); err != nil {
 			return err
 		}
 		internal.InitLog(os.Stdout, "INFO", "text", false)
 	} else {
-		if *configPath == "" {
-			*configPath = DefaultConfigPath()
-		}
-
 		// Load configuration.
-		config, err := ReadConfigFile(*configPath, !*noExpandEnv)
+		config, err := ReadConfig(*configPath, *fromStdin, !*noExpandEnv)
 		if err != nil {
 			return err
 		}
@@ -123,6 +122,9 @@ Arguments:
 	-config PATH
 	    Specifies the configuration file.
 	    Defaults to %s
+
+	-stdin
+	    Read configuration from stdin instead of a file.
 
 	-no-expand-env
 	    Disables environment variable expansion in configuration file.

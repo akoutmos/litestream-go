@@ -18,17 +18,14 @@ type StatusCommand struct{}
 // Run executes the command.
 func (c *StatusCommand) Run(ctx context.Context, args []string) (err error) {
 	fs := flag.NewFlagSet("litestream-status", flag.ContinueOnError)
-	configPath, noExpandEnv := registerConfigFlag(fs)
+	configPath, noExpandEnv, fromStdin := registerConfigFlag(fs)
 	fs.Usage = c.Usage
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
 	// Load configuration.
-	if *configPath == "" {
-		*configPath = DefaultConfigPath()
-	}
-	config, err := ReadConfigFile(*configPath, !*noExpandEnv)
+	config, err := ReadConfig(*configPath, *fromStdin, !*noExpandEnv)
 	if err != nil {
 		return err
 	}
@@ -126,6 +123,9 @@ Arguments:
 	-config PATH
 	    Specifies the configuration file.
 	    Defaults to %s
+
+	-stdin
+	    Read configuration from stdin instead of a file.
 
 	-no-expand-env
 	    Disables environment variable expansion in configuration file.

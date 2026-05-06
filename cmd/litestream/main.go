@@ -1900,9 +1900,26 @@ func DefaultConfigPath() string {
 	return defaultConfigPath
 }
 
-func registerConfigFlag(fs *flag.FlagSet) (configPath *string, noExpandEnv *bool) {
+func registerConfigFlag(fs *flag.FlagSet) (configPath *string, noExpandEnv *bool, stdin *bool) {
 	return fs.String("config", "", "config path"),
-		fs.Bool("no-expand-env", false, "do not expand env vars in config")
+		fs.Bool("no-expand-env", false, "do not expand env vars in config"),
+		fs.Bool("stdin", false, "read config from stdin")
+}
+
+// ReadConfig loads configuration from either stdin or a file path.
+// If fromStdin is true, config is read from os.Stdin and configPath must be empty.
+// If fromStdin is false and configPath is empty, DefaultConfigPath() is used.
+func ReadConfig(configPath string, fromStdin, expandEnv bool) (Config, error) {
+	if fromStdin {
+		if configPath != "" {
+			return DefaultConfig(), fmt.Errorf("cannot specify both -config and -stdin flags")
+		}
+		return ParseConfig(os.Stdin, expandEnv)
+	}
+	if configPath == "" {
+		configPath = DefaultConfigPath()
+	}
+	return ReadConfigFile(configPath, expandEnv)
 }
 
 // isValidHeartbeatURL checks if the URL is a valid HTTP or HTTPS URL.
